@@ -1,307 +1,280 @@
-        // DOM Elements
-        const fileInput = document.getElementById('fileInput');
-        const uploadArea = document.getElementById('uploadArea');
-        const imagePreview = document.getElementById('imagePreview');
-        const previewImage = document.getElementById('previewImage');
-        const loadingAnimation = document.getElementById('loadingAnimation');
-        const analyzeButton = document.getElementById('analyzeButton');
-        const confidenceFill = document.getElementById('confidenceFill');
-        const confidencePercent = document.getElementById('confidencePercent');
-        const conditionDesc = document.getElementById('conditionDesc');
-        const treatmentsContainer = document.getElementById('treatmentsContainer');
-        const chatButton = document.getElementById('chatButton');
-        const chatContainer = document.getElementById('chatContainer');
-        const chatClose = document.getElementById('chatClose');
-        const chatInput = document.getElementById('chatInput');
-        const sendButton = document.getElementById('sendButton');
-        const chatMessages = document.getElementById('chatMessages');
+// Wait for the DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Elements
+    const chatMessages = document.getElementById('chat-messages');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+    const micBtn = document.getElementById('mic-btn');
+    const feedbackBtns = document.querySelectorAll('.feedback-btn');
+    const feedbackModal = document.getElementById('feedback-modal');
+    const closeModalBtn = document.querySelector('.close-modal');
+    const cancelBtn = document.querySelector('.cancel-btn');
+    const feedbackForm = document.getElementById('feedback-form');
+    const uploadBtns = document.querySelectorAll('.upload-btn');
+    const quickActionBtns = document.querySelectorAll('.quick-action-btn');
+    const newAnalysisBtn = document.querySelector('.new-analysis-btn');
+    
+    // Apply animation classes to elements
+    document.querySelectorAll('.stat-card').forEach((card, index) => {
+        card.classList.add('fade-in');
+        card.style.animationDelay = `${index * 0.1}s`;
+    });
+    document.querySelectorAll('.treatment-card').forEach((card, index) => {
+        card.classList.add('slide-in-up');
+        card.style.animationDelay = `${index * 0.1 + 0.2}s`;
+    });
+    
+    // Function to add a message to the chat
+    function addMessage(content, isUser = false) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'} fade-in`;
         
-        // Dummy data for demonstration
-        const dummyConditions = [
-            {
-                name: "Dental Caries (Cavity)",
-                description: "Decay detected on the occlusal surface of tooth #19 (lower left first molar). Moderate depth, approaching dentin.",
-                confidence: 92,
-                treatments: [
-                    {
-                        name: "Composite Filling",
-                        description: "Remove decayed material and fill with tooth-colored composite resin.",
-                        outcome: "Preserves tooth structure with excellent aesthetics",
-                        recommended: true
-                    },
-                    {
-                        name: "Amalgam Filling",
-                        description: "Traditional metal filling with longer durability for posterior teeth.",
-                        outcome: "Durable solution for moderate to large cavities",
-                        recommended: false
-                    }
-                ]
-            },
-            {
-                name: "Periapical Abscess",
-                description: "Infection at the root of tooth #30 (lower right first molar). Visible radiolucency at apex suggesting bacterial infection.",
-                confidence: 88,
-                treatments: [
-                    {
-                        name: "Root Canal Therapy",
-                        description: "Remove infected pulp, clean canals, and seal with gutta-percha.",
-                        outcome: "Saves natural tooth and eliminates infection",
-                        recommended: true
-                    },
-                    {
-                        name: "Extraction + Implant",
-                        description: "Remove tooth and replace with dental implant.",
-                        outcome: "Permanent replacement with natural function",
-                        recommended: false
-                    },
-                    {
-                        name: "Antibiotic Therapy",
-                        description: "Prescribed as adjunct treatment to address acute infection.",
-                        outcome: "Temporary relief, must be followed by definitive treatment",
-                        recommended: false
-                    }
-                ]
-            }
-        ];
+        const now = new Date();
+        const hours = now.getHours();
+        const minutes = now.getMinutes();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const formattedHours = hours % 12 || 12;
+        const formattedMinutes = minutes < 10 ? `0${minutes}` : minutes;
+        const timeString = `${formattedHours}:${formattedMinutes} ${ampm}`;
         
-        // Event Listeners
-        fileInput.addEventListener('change', handleFileSelect);
-        uploadArea.addEventListener('dragover', handleDragOver);
-        uploadArea.addEventListener('drop', handleFileDrop);
-        analyzeButton.addEventListener('click', analyzeImage);
-        chatButton.addEventListener('click', toggleChat);
-        chatClose.addEventListener('click', toggleChat);
-        sendButton.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
+        messageDiv.innerHTML = `
+            <div class="message-content">
+                <p>${content}</p>
+            </div>
+            <div class="message-time">${timeString}</div>
+        `;
         
-        // Functions
-        function handleFileSelect(e) {
-            const file = e.target.files[0];
-            if (file && file.type.match('image.*')) {
-                displayPreview(file);
-            }
-        }
+        chatMessages.appendChild(messageDiv);
         
-        function handleDragOver(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            uploadArea.style.borderColor = var('--primary');
-            uploadArea.style.backgroundColor = 'rgba(0, 102, 204, 0.05)';
-        }
-        
-        function handleFileDrop(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            uploadArea.style.borderColor = '';
-            uploadArea.style.backgroundColor = '';
+        // Scroll to bottom of chat
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    // Function to handle user input
+    function handleUserInput() {
+        const message = userInput.value.trim();
+        if (message) {
+            addMessage(message, true);
+            userInput.value = '';
             
-            const file = e.dataTransfer.files[0];
-            if (file && file.type.match('image.*')) {
-                fileInput.files = e.dataTransfer.files;
-                displayPreview(file);
-            }
-        }
-        
-        function displayPreview(file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                previewImage.src = e.target.result;
-                imagePreview.style.display = 'block';
-                analyzeButton.disabled = false;
-            };
-            reader.readAsDataURL(file);
-        }
-        
-        function analyzeImage() {
-            // Show loading animation
-            loadingAnimation.style.display = 'flex';
-            
-            // Simulate API call delay
+            // Simulate AI response after a short delay
             setTimeout(() => {
-                // Hide loading animation
-                loadingAnimation.style.display = 'none';
-                
-                // Display random result from dummy data
-                const randomIndex = Math.floor(Math.random() * dummyConditions.length);
-                displayResults(dummyConditions[randomIndex]);
-            }, 2000);
-        }
-        
-        function displayResults(condition) {
-            // Update condition description
-            conditionDesc.textContent = condition.description;
-            
-            // Update confidence bar
-            confidenceFill.style.width = `${condition.confidence}%`;
-            confidencePercent.textContent = `${condition.confidence}%`;
-            
-            // Clear previous treatments
-            treatmentsContainer.innerHTML = '';
-            
-            // Add treatments
-            condition.treatments.forEach(treatment => {
-                const treatmentElement = document.createElement('div');
-                treatmentElement.className = 'treatment-item';
-                
-                const nameElement = document.createElement('div');
-                nameElement.className = 'treatment-name';
-                nameElement.textContent = treatment.name;
-                
-                if (treatment.recommended) {
-                    const badge = document.createElement('span');
-                    badge.className = 'treatment-badge';
-                    badge.textContent = 'Recommended';
-                    nameElement.appendChild(badge);
-                }
-                
-                const descElement = document.createElement('div');
-                descElement.className = 'treatment-desc';
-                descElement.textContent = treatment.description;
-                
-                const outcomeElement = document.createElement('div');
-                outcomeElement.className = 'treatment-outcome';
-                
-                const icon = document.createElement('i');
-                icon.className = 'fas fa-check-circle';
-                outcomeElement.appendChild(icon);
-                
-                const outcomeText = document.createTextNode(treatment.outcome);
-                outcomeElement.appendChild(outcomeText);
-                
-                treatmentElement.appendChild(nameElement);
-                treatmentElement.appendChild(descElement);
-                treatmentElement.appendChild(outcomeElement);
-                
-                treatmentsContainer.appendChild(treatmentElement);
-            });
-        }
-        
-        function toggleChat() {
-            if (chatContainer.style.display === 'flex') {
-                chatContainer.style.display = 'none';
-            } else {
-                chatContainer.style.display = 'flex';
-            }
-        }
-        
-        function sendMessage() {
-            const message = chatInput.value.trim();
-            if (!message) return;
-            
-            // Add user message
-            addMessage(message, 'user');
-            chatInput.value = '';
-            
-            // Simulate AI response
-            setTimeout(() => {
-                const responses = [
-                    "Based on the X-ray analysis, I recommend scheduling a follow-up appointment to discuss treatment options in more detail.",
-                    "The AI analysis suggests a composite filling would be the most suitable treatment for this cavity. Would you like more information about this procedure?",
-                    "I've checked our system and found that this patient has a history of sensitivity to certain dental materials. Would you like me to suggest alternatives?",
-                    "The scan shows signs of potential early-stage periodontitis. I recommend additional diagnostic tests to confirm.",
-                    "According to our evidence-based protocols, the treatment plan with the highest success rate for this condition would be root canal therapy followed by a crown."
-                ];
-                
-                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-                addMessage(randomResponse, 'ai');
+                simulateAIResponse(message);
             }, 1000);
         }
+    }
+    
+    // Simulated AI responses based on user input
+    function simulateAIResponse(userMessage) {
+        let aiResponse;
         
-        function addMessage(text, type) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${type}-message`;
-            messageDiv.textContent = text;
-            
-            const timeSpan = document.createElement('span');
-            timeSpan.className = 'message-time';
-            
-            const now = new Date();
-            const hours = now.getHours();
-            const minutes = now.getMinutes();
-            const ampm = hours >= 12 ? 'PM' : 'AM';
-            const formattedHours = hours % 12 || 12;
-            const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
-            
-            timeSpan.textContent = `${formattedHours}:${formattedMinutes} ${ampm}`;
-            messageDiv.appendChild(timeSpan);
-            
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+        // Convert user message to lowercase for easier matching
+        const lowerCaseMessage = userMessage.toLowerCase();
+        
+        // Check for patterns in the user message
+        if (lowerCaseMessage.includes("hello") || lowerCaseMessage.includes("hi")) {
+            aiResponse = "Hello! I'm your Dental AI Assistant. I can help diagnose conditions and suggest treatments based on patient data. How can I assist you today?";
+        } else if (lowerCaseMessage.includes("x-ray") || lowerCaseMessage.includes("scan")) {
+            aiResponse = "I've analyzed the uploaded X-ray and detected potential issues: <br><br>1. Moderate caries on tooth #18 (occlusal surface)<br>2. Early-stage periodontal disease in lower anterior region<br>3. Potential need for root canal on tooth #30<br><br>Would you like me to suggest treatment options for any of these conditions?";
+        } else if (lowerCaseMessage.includes("treatment") || lowerCaseMessage.includes("suggestions")) {
+            aiResponse = "Based on the patient's condition, here are my recommended treatments:<br><br>1. <strong>Composite Restoration</strong> for tooth #18 - Expected outcome: Resolve caries with 95% success rate<br>2. <strong>Scaling and Root Planing</strong> for periodontal disease - Expected outcome: Reduction in pocket depth within 4-6 weeks<br>3. <strong>Root Canal Therapy</strong> for tooth #30 - Expected outcome: Pain relief and preservation of natural tooth<br><br>Would you like more details on any of these treatments?";
+        } else if (lowerCaseMessage.includes("patient") || lowerCaseMessage.includes("history")) {
+            aiResponse = "Patient History Analysis:<br><br>- 45-year-old male<br>- Hypertension (controlled with medication)<br>- Previous allergic reaction to penicillin<br>- Last dental visit: 18 months ago<br>- Consistent reports of sensitivity to cold on lower right quadrant<br><br>Based on this history, I recommend avoiding epinephrine in anesthetics and considering alternative antibiotics if needed.";
+        } else if (lowerCaseMessage.includes("integrate") || lowerCaseMessage.includes("records")) {
+            aiResponse = "I've successfully connected to the clinic's record system. I can now access:<br><br>- Previous treatment records<br>- Insurance information<br>- Scheduled appointments<br>- Medication history<br><br>This integration allows me to provide more personalized treatment suggestions based on comprehensive patient data.";
+        } else {
+            aiResponse = "I've analyzed this information and will incorporate it into my assessment. Would you like me to analyze any specific aspect of the patient's dental condition or suggest evidence-based treatments based on the available data?";
         }
         
-        // Add event listeners for nav items and patient cards
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', function() {
-                document.querySelector('.nav-item.active').classList.remove('active');
-                this.classList.add('active');
-            });
-        });
+        addMessage(aiResponse);
+    }
+    
+    // Event listeners
+    sendBtn.addEventListener('click', handleUserInput);
+    
+    userInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            handleUserInput();
+        }
+    });
+    
+    // Voice input functionality
+    let isRecording = false;
+    let recognition;
+    
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        recognition = new (window.webkitSpeechRecognition || window.SpeechRecognition)();
+        recognition.continuous = false;
+        recognition.interimResults = false;
         
-        document.querySelectorAll('.patient-card').forEach(card => {
-            card.addEventListener('click', function() {
-                document.querySelector('.patient-card.active').classList.remove('active');
-                this.classList.add('active');
-            });
-        });
-        
-        // AI chatbot responses for dental queries
-        const dentalResponses = {
-            keywords: {
-                "pain": [
-                    "Based on your description of pain, it could be related to several conditions. Could you specify which tooth is causing discomfort?",
-                    "Pain can indicate various issues from sensitivity to infection. Would you like me to analyze this patient's previous records for similar symptoms?"
-                ],
-                "xray": [
-                    "The uploaded X-ray shows potential signs of enamel erosion on teeth #18-20. Would you like me to recommend preventive treatments?",
-                    "I've analyzed the X-ray and detected a possible periapical radiolucency around tooth #30. Consider additional diagnostic imaging for confirmation."
-                ],
-                "treatment": [
-                    "Based on the patient's history and current condition, a minimally invasive approach would be optimal. Would you like to see evidence-based success rates?",
-                    "I've compared several treatment options using our clinical database. For this case, the composite restoration shows the highest long-term success rate."
-                ],
-                "insurance": [
-                    "Based on this patient's insurance plan, the proposed treatment should have approximately 80% coverage. Would you like me to generate a cost estimate?",
-                    "I've checked the insurance database. This procedure is covered, but a pre-authorization might be required. Would you like me to prepare the documentation?"
-                ]
-            },
-            
-            getResponse: function(message) {
-                // Default responses if no keywords match
-                const defaultResponses = [
-                    "I've analyzed the patient data and can provide evidence-based treatment recommendations. What specific aspect would you like to discuss?",
-                    "Based on similar cases in our database, there are several approaches to consider. Would you like me to rank them by success rate?",
-                    "I can help interpret these results in context with the patient's medical history. Would you like me to highlight any relevant interactions or contraindications?"
-                ];
-                
-                // Check for keyword matches
-                for (const keyword in this.keywords) {
-                    if (message.toLowerCase().includes(keyword)) {
-                        const responses = this.keywords[keyword];
-                        return responses[Math.floor(Math.random() * responses.length)];
-                    }
-                }
-                
-                // If no keywords match, return a default response
-                return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
-            }
+        recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            userInput.value = transcript;
         };
         
-        // Override the sendMessage function to use the dental responses
-        function sendMessage() {
-            const message = chatInput.value.trim();
-            if (!message) return;
-            
-            // Add user message
-            addMessage(message, 'user');
-            chatInput.value = '';
-            
-            // Get AI response based on dental context
-            setTimeout(() => {
-                const aiResponse = dentalResponses.getResponse(message);
-                addMessage(aiResponse, 'ai');
-            }, 1000);
+        recognition.onend = function() {
+            micBtn.classList.remove('recording');
+            isRecording = false;
+        };
+    }
+    
+    micBtn.addEventListener('click', function() {
+        if (!recognition) {
+            alert('Speech recognition is not supported in your browser.');
+            return;
         }
+        
+        if (!isRecording) {
+            recognition.start();
+            micBtn.classList.add('recording');
+            isRecording = true;
+        } else {
+            recognition.stop();
+            micBtn.classList.remove('recording');
+            isRecording = false;
+        }
+    });
+    
+    // Feedback functionality
+    feedbackBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            feedbackModal.classList.add('show');
+        });
+    });
+    
+    closeModalBtn.addEventListener('click', function() {
+        feedbackModal.classList.remove('show');
+    });
+    
+    cancelBtn.addEventListener('click', function() {
+        feedbackModal.classList.remove('show');
+    });
+    
+    feedbackForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Simulate feedback processing
+        const formData = new FormData(feedbackForm);
+        const feedbackType = formData.get('feedback-type');
+        const feedbackText = formData.get('feedback-text');
+        
+        console.log('Feedback submitted:', {
+            type: feedbackType,
+            text: feedbackText
+        });
+        
+        // Reset form and close modal
+        feedbackForm.reset();
+        feedbackModal.classList.remove('show');
+        
+        // Thank user for feedback
+        addMessage("Thank you for your feedback! It helps me improve my recommendations for future cases.");
+    });
+    
+    // File upload functionality
+    uploadBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*, application/pdf';
+            
+            fileInput.onchange = function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    // Simulate file upload and processing
+                    addMessage(`Uploading and analyzing ${file.name}...`);
+                    
+                    setTimeout(() => {
+                        addMessage(`I've analyzed ${file.name} and detected the following:<br><br>1. Clear evidence of dental caries on teeth #14, #15<br>2. Early signs of enamel erosion on anterior teeth<br>3. Previous root canal treatment on tooth #19 appears stable<br><br>Would you like treatment suggestions based on these findings?`);
+                    }, 2000);
+                }
+            };
+            
+            fileInput.click();
+        });
+    });
+    
+    // Quick action buttons
+    quickActionBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const action = this.getAttribute('data-action');
+            
+            switch(action) {
+                case 'analyze':
+                    addMessage('Please upload an X-ray or patient records for me to analyze.', true);
+                    setTimeout(() => {
+                        addMessage('I can analyze digital X-rays, CBCT scans, intraoral photos, and patient medical records. Simply upload the files and I\'ll provide a comprehensive assessment.');
+                    }, 1000);
+                    break;
+                    
+                case 'suggest':
+                    addMessage('I need treatment suggestions for a patient with severe periodontal disease.', true);
+                    setTimeout(() => {
+                        addMessage('For severe periodontal disease, I recommend:<br><br>1. <strong>Full-Mouth Debridement</strong> - Remove all plaque and calculus<br>2. <strong>Scaling and Root Planing</strong> - Deep cleaning below the gumline<br>3. <strong>Localized Antibiotic Therapy</strong> - Arestin® in pockets >5mm<br>4. <strong>Follow-up Maintenance</strong> - 3-month recall schedule<br><br>Studies show this comprehensive approach has a 70-85% success rate in stabilizing the condition.');
+                    }, 1000);
+                    break;
+                    
+                case 'integrate':
+                    addMessage('Can you connect to our clinic management system?', true);
+                    setTimeout(() => {
+                        addMessage('I can integrate with most popular dental practice management systems including Dentrix, Eaglesoft, Open Dental, and Curve Dental. This allows me to access patient records, treatment history, and insurance information. Would you like me to walk you through the integration process?');
+                    }, 1000);
+                    break;
+            }
+        });
+    });
+    
+    // New analysis button
+    if (newAnalysisBtn) {
+        newAnalysisBtn.addEventListener('click', function() {
+            // Clear chat history
+            while (chatMessages.firstChild) {
+                chatMessages.removeChild(chatMessages.firstChild);
+            }
+            
+            // Add welcome message
+            addMessage("Welcome to a new dental analysis session. You can upload patient records or X-rays for me to analyze, or ask me for treatment suggestions for specific conditions.");
+        });
+    }
+    
+    // Learning and improvement system
+    const learningSystem = {
+        feedbackData: [],
+        
+        addFeedback: function(diagnosisId, wasCorrect, dentistSuggestion) {
+            this.feedbackData.push({
+                diagnosisId,
+                wasCorrect,
+                dentistSuggestion,
+                timestamp: new Date()
+            });
+            
+            // In a real system, this would be sent to a server
+            this.updateModel();
+            
+            return this.feedbackData.length;
+        },
+        
+        updateModel: function() {
+            // Simulate model updating
+            console.log('Learning from new feedback data...');
+            // In a real system, this would trigger model retraining or parameter adjustment
+        },
+        
+        getAccuracyMetrics: function() {
+            if (this.feedbackData.length === 0) return { accuracy: 0, sampleSize: 0 };
+            
+            const correctDiagnoses = this.feedbackData.filter(item => item.wasCorrect).length;
+            return {
+                accuracy: (correctDiagnoses / this.feedbackData.length) * 100,
+                sampleSize: this.feedbackData.length
+            };
+        }
+    };
+    
+    // Expose learning system to global scope for debugging
+    window.dentalAILearning = learningSystem;
+    
+    // Initialize the chat with a welcome message
+    addMessage("Welcome to DentalAI Assistant. I can help analyze patient data, suggest treatments, and integrate with your clinic systems. How can I assist you today?");
+});
